@@ -2,14 +2,19 @@ import streamlit as st
 import pandas as pd
 import pickle
 import numpy as np
-import os
 from groq import Groq
-
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 load_dotenv()
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+try:
+    groq_api_key = st.secrets["GROQ_API_KEY"]
+except:
+    groq_api_key = os.getenv("GROQ_API_KEY")
+
+groq_client = Groq(api_key=groq_api_key)
+
 
 # Get the folder where app.py is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
