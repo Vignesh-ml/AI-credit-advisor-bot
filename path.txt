@@ -1,1 +1,1 @@
-C:\Users\gandl\.antigravity\credit_bot\app.py
+streamlit run "C:\Users\gandl\.antigravity\credit_bot\app.py"

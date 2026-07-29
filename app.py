@@ -200,9 +200,35 @@ def generate_pdf_report(profile, prediction, probability, score, reasons, sugges
     # Assessment Result
     story.append(Paragraph("Credit Assessment Result", header_style))
     if prediction == 1:
+    # 1. Show on Streamlit Web UI
+        st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #1a2e1a, #0a1f0a); 
+                        border: 2px solid #00C851; border-radius: 15px; 
+                        padding: 1.5rem; text-align: center; margin: 1rem 0;">
+                <h2 style="color: #00C851; margin: 0;">✅ GOOD CREDIT RISK</h2>
+                <p style="color: #888; margin: 0.5rem 0 0 0;">
+                    Approval Probability: <strong style="color: #00C851;">{probability[1]*100:.1f}%</strong>
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+    
+        # 2. Define variables for the PDF Report
         result_text = f"<font color='green'><b>✓ GOOD CREDIT RISK</b></font>"
         prob_text = f"Approval Probability: {probability[1]*100:.1f}%"
     else:
+        # 1. Show on Streamlit Web UI
+        st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #2e1a1a, #1f0a0a); 
+                        border: 2px solid #ff4444; border-radius: 15px; 
+                        padding: 1.5rem; text-align: center; margin: 1rem 0;">
+                <h2 style="color: #ff4444; margin: 0;">❌ HIGH CREDIT RISK</h2>
+                <p style="color: #888; margin: 0.5rem 0 0 0;">
+                    Risk Probability: <strong style="color: #ff4444;">{probability[0]*100:.1f}%</strong>
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # 2. Define variables for the PDF Report
         result_text = f"<font color='red'><b>✗ HIGH CREDIT RISK</b></font>"
         prob_text = f"Risk Probability: {probability[0]*100:.1f}%"
 
@@ -287,6 +313,9 @@ st.set_page_config(
 
 st.markdown("""
     <style>
+    [data-testid="stSidebarHeader"] {
+    display: none;
+    }
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     
     * {
@@ -330,8 +359,25 @@ if 'current_score' not in st.session_state:
     st.session_state.current_score = None
 
 # Title
-st.title("💳 AI Credit Advisor Bot")
-st.subheader("Find out your credit risk instantly")
+st.markdown("""
+    <div style="text-align: center; padding: 2rem 0 1rem 0;">
+        <h1 style="color: #00C851; font-size: 2.5rem; margin-bottom: 0;">💳 AI Credit Advisor Bot</h1>
+        <p style="color: #888; font-size: 1.1rem; margin-top: 0.5rem;">
+            Powered by Machine Learning + Llama 3.3 AI
+        </p>
+        <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
+            <span style="background: #1a1a2e; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; color: #00C851;">
+                ✅ ML Powered
+            </span>
+            <span style="background: #1a1a2e; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; color: #00C851;">
+                🤖 AI Chatbot
+            </span>
+            <span style="background: #1a1a2e; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; color: #00C851;">
+                📄 PDF Report
+            </span>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 st.markdown("---")
 
 # Sidebar
@@ -580,14 +626,35 @@ if predict_btn:
 # Chat section — only shows after prediction
 if st.session_state.current_profile is not None:
     st.markdown("---")
-    st.subheader("💬 Ask Your Credit Advisor")
-    st.caption("Ask anything about your credit result")
+    st.markdown("""
+        <div style="background: #1a1a2e; border-radius: 10px; 
+                    padding: 1rem; margin-bottom: 1rem;">
+            <h3 style="color: #00C851; margin: 0;">💬 Ask Your Credit Advisor</h3>
+            <p style="color: #888; margin: 0.3rem 0 0 0; font-size: 0.9rem;">
+                Powered by Llama 3.3 — Ask anything about your credit result
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
     for chat in st.session_state.chat_history:
         if chat['role'] == 'user':
-            st.markdown(f"**You:** {chat['message']}")
+            st.markdown(f"""
+                <div style="background: #1a1a2e; border-radius: 10px; 
+                            padding: 0.8rem; margin: 0.5rem 0; 
+                            border-left: 3px solid #888;">
+                    <strong style="color: #888;">You:</strong>
+                    <p style="margin: 0.3rem 0 0 0;">{chat['message']}</p>
+                </div>
+            """, unsafe_allow_html=True)
         else:
-            st.markdown(f"**Advisor:** {chat['message']}")
+            st.markdown(f"""
+                <div style="background: #0a1f0a; border-radius: 10px; 
+                            padding: 0.8rem; margin: 0.5rem 0;
+                            border-left: 3px solid #00C851;">
+                    <strong style="color: #00C851;">AI Advisor:</strong>
+                    <p style="margin: 0.3rem 0 0 0;">{chat['message']}</p>
+                </div>
+            """, unsafe_allow_html=True)
 
     with st.form(key='chat_form', clear_on_submit=True):
         user_question = st.text_area(
