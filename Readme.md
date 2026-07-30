@@ -109,4 +109,3 @@ streamlit run app.py
 
 ---
 
-*Built as part of AIML coursework — BMS College of Engineering*
