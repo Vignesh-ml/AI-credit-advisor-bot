@@ -15,7 +15,7 @@
 
 ## 🎯 Problem Statement
 
-Millions of people in India — students, freshers, rural populations — get rejected for loans not because they're irresponsible, but because they have **no credit history**. Banks call them **thin-file users**.
+Millions of people in India students, freshers, rural populations get rejected for loans not because they're irresponsible, but because they have **no credit history**. Banks call them **thin-file users**.
 
 Traditional credit scoring systems can't evaluate them. Our bot solves this.
 
@@ -94,12 +94,12 @@ streamlit run app.py
 
 | Name | Contribution |
 |---|---|
-| Vignesh | Data prep, ML model, model evaluation, risk logic |
-| Dev | Streamlit UI, AI chatbot, PDF report, deployment |
+| Vignesh | Data prep, ML model, model evaluation, risk logic ,Streamlit UI, AI chatbot, PDF report, deployment|
+
 
 ---
 
-## 📚 What We Learned
+## 📚 What I've Learned
 
 - End-to-end ML pipeline from raw data to deployed product
 - Why recall matters more than accuracy in credit scoring
@@ -109,4 +109,3 @@ streamlit run app.py
 
 ---
 
-*Built as part of AIML coursework — BMS College of Engineering*
