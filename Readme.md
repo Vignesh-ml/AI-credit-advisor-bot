@@ -30,6 +30,8 @@ Traditional credit scoring systems can't evaluate them. Our bot solves this.
 | 💡 Improvement Tips | Personalized steps to improve credit score |
 | 💬 AI Chatbot | Llama 3.3 powered chatbot for follow-up questions |
 | 📊 Credit Score | Estimates score on 300-900 scale |
+| 🔐 Optional Login | Save prediction history across sessions, or skip and use as guest |
+| 📈 Score History | Visual trend chart of past credit assessments |
 | 📄 PDF Report | Downloadable credit assessment report |
 | 🌐 Live Deployed | Accessible from any device |
 

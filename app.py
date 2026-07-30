@@ -5,6 +5,10 @@ import numpy as np
 from groq import Groq
 import os
 from dotenv import load_dotenv
+import matplotlib.pyplot as plt
+from database import init_db, create_user, verify_user, save_prediction, get_user_history
+
+init_db()
 
 load_dotenv()
 
@@ -108,6 +112,30 @@ def generate_explanation(input_data, prediction):
 
     return reasons, suggestions
 
+def compare_scenarios(original_data, modified_changes):
+    modified_data = original_data.copy()
+    modified_data.update(modified_changes)
+    
+    original_pred, original_prob = predict_credit(original_data)
+    modified_pred, modified_prob = predict_credit(modified_data)
+    
+    if original_pred == 1:
+        original_score = int(600 + (original_prob[1] * 300))
+    else:
+        original_score = int(300 + (original_prob[0] * 200))
+    
+    if modified_pred == 1:
+        modified_score = int(600 + (modified_prob[1] * 300))
+    else:
+        modified_score = int(300 + (modified_prob[0] * 200))
+    
+    return {
+        'original_pred': original_pred,
+        'original_score': original_score,
+        'modified_pred': modified_pred,
+        'modified_score': modified_score,
+        'score_change': modified_score - original_score
+    }
 
 def chat_with_advisor(user_question, credit_profile, prediction, score):
     if prediction == 1:
@@ -316,10 +344,14 @@ st.markdown("""
     [data-testid="stSidebarHeader"] {
     display: none;
     }
+    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined');
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     
-    * {
+    body, p, div, span, h1, h2, h3, h4, h5, h6, button, input, textarea, label {
         font-family: 'Poppins', sans-serif !important;
+    }
+    [data-testid="stIconMaterial"] {
+        font-family: 'Material Symbols Outlined' !important;
     }
     .main {
         max-width: 800px;
@@ -357,6 +389,11 @@ if 'current_prediction' not in st.session_state:
     st.session_state.current_prediction = None
 if 'current_score' not in st.session_state:
     st.session_state.current_score = None
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'username' not in st.session_state:
+    st.session_state.username = None
+
 
 # Title
 st.markdown("""
@@ -380,24 +417,165 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.markdown("---")
 
-# Sidebar
 with st.sidebar:
-    st.header("📘 Credit Score Guide")
+    # Login Section
+    if not st.session_state.logged_in:
+        st.markdown("### 👤 Account")
+        
+        tab1, tab2 = st.tabs(["Login", "Sign Up"])
+        
+        with tab1:
+            login_username = st.text_input("Username", key="login_user")
+            login_password = st.text_input("Password", type="password", key="login_pass")
+            
+            col_l1, col_l2 = st.columns(2)
+            with col_l1:
+                if st.button("Login", use_container_width=True):
+                    if verify_user(login_username, login_password):
+                        st.session_state.logged_in = True
+                        st.session_state.username = login_username
+                        st.rerun()
+                    else:
+                        st.error("Invalid username or password")
+            with col_l2:
+                if st.button("Skip →", use_container_width=True):
+                    st.session_state.logged_in = False
+                    st.session_state.username = "guest"
+        
+        with tab2:
+            signup_username = st.text_input("Choose Username", key="signup_user")
+            signup_password = st.text_input("Choose Password", type="password", key="signup_pass")
+            
+            if st.button("Create Account", use_container_width=True):
+                if len(signup_username) < 3:
+                    st.error("Username must be at least 3 characters")
+                elif len(signup_password) < 4:
+                    st.error("Password must be at least 4 characters")
+                else:
+                    success, message = create_user(signup_username, signup_password)
+                    if success:
+                        st.success(message)
+                        st.session_state.logged_in = True
+                        st.session_state.username = signup_username
+                        st.rerun()
+                    else:
+                        st.error(message)
+    else:
+        st.markdown(f"""
+            <div style="background: #12121e; border-radius: 10px; padding: 1rem; 
+                        margin-bottom: 1rem; text-align: center;">
+                <p style="color: #00C851; margin: 0; font-weight: 600;">
+                    👋 Welcome, {st.session_state.username}
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("Logout", use_container_width=True):
+            st.session_state.logged_in = False
+            st.session_state.username = None
+            st.rerun()
+    
     st.markdown("---")
-    st.markdown("**Score Ranges:**")
-    st.markdown("🟢 750-900 — Excellent")
-    st.markdown("🟡 650-749 — Good")
-    st.markdown("🟠 550-649 — Fair")
-    st.markdown("🔴 300-549 — Poor")
-    st.markdown("---")
-    st.markdown("**Key Tips:**")
-    st.markdown("✅ Pay bills on time")
-    st.markdown("✅ Keep loan amounts low")
-    st.markdown("✅ Maintain savings")
-    st.markdown("✅ Stable employment helps")
-    st.markdown("✅ Shorter loan duration = better")
-    st.markdown("---")
-    st.caption("This is an AI prototype for educational purposes.")
+
+    # Logo/Header with gradient
+    st.markdown("""
+        <div style="text-align: center; padding: 1.5rem 0 1rem 0; 
+                    background: linear-gradient(135deg, #0a1f0a, #1a1a2e);
+                    border-radius: 12px; margin-bottom: 1rem;">
+            <div style="font-size: 2.5rem;">💳</div>
+            <h2 style="color: #00C851; margin: 0.3rem 0 0 0; font-size: 1.3rem;">
+                Credit Guide
+            </h2>
+            <p style="color: #666; font-size: 0.75rem; margin: 0.2rem 0 0 0;">
+                Know your score. Improve it.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Visual Score Meter
+    st.markdown("""
+        <div style="background: #12121e; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+            <p style="color: #888; font-size: 0.8rem; margin: 0 0 0.5rem 0; font-weight: 600;">
+                SCORE SPECTRUM
+            </p>
+            <div style="height: 8px; border-radius: 10px; margin-bottom: 0.5rem;
+                        background: linear-gradient(90deg, #FF4444 0%, #FF8C00 33%, #FFD700 66%, #00C851 100%);">
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #666;">
+                <span>300</span>
+                <span>900</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Score Ranges — refined cards
+    st.markdown("""<p style="color: #888; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">SCORE RANGES</p>""", unsafe_allow_html=True)
+    
+    score_ranges = [
+        ("750-900", "Excellent", "#00C851", "🟢"),
+        ("650-749", "Good", "#FFD700", "🟡"),
+        ("550-649", "Fair", "#FF8C00", "🟠"),
+        ("300-549", "Poor", "#FF4444", "🔴")
+    ]
+    
+    for range_val, label, color, emoji in score_ranges:
+        st.markdown(f"""
+            <div style="background: #12121e; border: 1px solid {color}33;
+                        border-left: 4px solid {color}; 
+                        border-radius: 8px; padding: 0.6rem 0.9rem; 
+                        margin-bottom: 0.5rem; display: flex; 
+                        justify-content: space-between; align-items: center;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                <span style="color: {color}; font-weight: 600; font-size: 0.9rem;">{emoji} {label}</span>
+                <span style="color: #666; font-size: 0.8rem; font-family: monospace;">{range_val}</span>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin: 1.2rem 0;'></div>", unsafe_allow_html=True)
+
+    # Key Tips — icon cards
+    st.markdown("""<p style="color: #888; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">HOW TO IMPROVE</p>""", unsafe_allow_html=True)
+    
+    tips = [
+        ("💰", "Pay bills on time"),
+        ("📉", "Keep loan amounts low"),
+        ("🏦", "Maintain savings"),
+        ("💼", "Stable employment helps"),
+        ("⏱️", "Shorter loan duration")
+    ]
+    
+    for icon, tip in tips:
+        st.markdown(f"""
+            <div style="background: #12121e; border-radius: 8px; 
+                        padding: 0.65rem 0.9rem; margin-bottom: 0.4rem;
+                        display: flex; align-items: center; gap: 0.7rem;
+                        border: 1px solid #ffffff0d;">
+                <span style="font-size: 1.1rem;">{icon}</span>
+                <span style="color: #ccc; font-size: 0.85rem;">{tip}</span>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin: 1.2rem 0;'></div>", unsafe_allow_html=True)
+
+    # Tech badge
+    st.markdown("""
+        <div style="background: #12121e; border-radius: 10px; padding: 0.8rem; 
+                    text-align: center; margin-bottom: 1rem; border: 1px solid #ffffff0d;">
+            <p style="color: #666; font-size: 0.7rem; margin: 0 0 0.4rem 0;">POWERED BY</p>
+            <p style="color: #00C851; font-size: 0.8rem; margin: 0; font-weight: 600;">
+                Scikit-learn · Llama 3.3
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Footer
+    st.markdown("""
+        <div style="text-align: center; padding: 0.5rem 0;">
+            <p style="color: #444; font-size: 0.7rem; margin: 0;">
+                ⚠️ Educational prototype only
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
 # Input form
 st.header("📋 Enter Your Details")
@@ -515,6 +693,32 @@ st.markdown("---")
 # Predict button
 predict_btn = st.button("🔍 Check My Credit Risk", use_container_width=True)
 
+st.markdown("---")
+compare_mode = st.checkbox("🔄 Compare with a modified scenario")
+
+if compare_mode:
+    st.info("💡 Adjust the values below to see how they affect your credit score")
+    
+    col_c1, col_c2 = st.columns(2)
+    with col_c1:
+        new_duration = st.number_input("New Loan Duration (months)", min_value=1, max_value=72, value=duration)
+    with col_c2:
+        new_credit_amount = st.number_input("New Credit Amount", min_value=100, max_value=20000, value=credit_amount)
+    
+    col_c3, col_c4 = st.columns(2)
+    with col_c3:
+        new_checking_status = st.selectbox(
+            "New Checking Status",
+            ["no checking", "little", "moderate", "rich"],
+            index=["no checking", "little", "moderate", "rich"].index(checking_status)
+        )
+    with col_c4:
+        new_savings_status = st.selectbox(
+            "New Savings Status",
+            ["no known savings", "little", "moderate", "quite rich", "rich"],
+            index=["no known savings", "little", "moderate", "quite rich", "rich"].index(savings_status)
+        )
+
 if predict_btn:
     if credit_amount < 100:
         st.warning("⚠️ Credit amount seems too low. Please check your input.")
@@ -596,10 +800,70 @@ if predict_btn:
     else:
         score = int(300 + (probability[0] * 200))
 
+    # Comparison mode
+    if compare_mode:
+        modified_changes = {
+            'duration': new_duration,
+            'credit_amount': new_credit_amount,
+            'checking_status': new_checking_status,
+            'savings_status': new_savings_status
+        }
+        
+        comparison = compare_scenarios(input_data, modified_changes)
+        
+        st.markdown("---")
+        st.subheader("📊 Scenario Comparison")
+        
+        col_r1, col_r2, col_r3 = st.columns(3)
+        
+        with col_r1:
+            st.markdown("**Current Profile**")
+            st.metric("Score", f"{comparison['original_score']}/900")
+            if comparison['original_pred'] == 1:
+                st.success("GOOD")
+            else:
+                st.error("BAD")
+        
+        with col_r2:
+            st.markdown("**Modified Profile**")
+            st.metric("Score", f"{comparison['modified_score']}/900")
+            if comparison['modified_pred'] == 1:
+                st.success("GOOD")
+            else:
+                st.error("BAD")
+        
+        with col_r3:
+            st.markdown("**Impact**")
+            change = comparison['score_change']
+            if change > 0:
+                st.metric("Change", f"+{change} points", delta=f"{change}")
+            elif change < 0:
+                st.metric("Change", f"{change} points", delta=f"{change}")
+            else:
+                st.metric("Change", "No change")
+        
+        if comparison['score_change'] > 0:
+            st.success(f"✅ These changes would improve your score by {comparison['score_change']} points!")
+        elif comparison['score_change'] < 0:
+            st.warning(f"⚠️ These changes would decrease your score by {abs(comparison['score_change'])} points")
+        else:
+            st.info("These changes don't significantly affect your score")
+
     st.session_state.current_profile = input_data
     st.session_state.current_prediction = prediction
     st.session_state.current_score = score
     st.session_state.chat_history = []
+
+    # Save to database if logged in
+    if st.session_state.logged_in and st.session_state.username != "guest":
+        result_text = "Good" if prediction == 1 else "Bad"
+        save_prediction(
+            st.session_state.username, 
+            score, 
+            result_text, 
+            credit_amount, 
+            duration
+        )
 
     st.metric("Estimated Score", f"{score} / 900")
     st.progress(min(max(score / 900, 0.0), 1.0))
@@ -622,6 +886,50 @@ if predict_btn:
     st.markdown("---")
     st.caption("⚠️ This is an AI prototype for educational purposes only. Not financial advice.")
     st.caption("Built with Python, Scikit-learn, and Streamlit.")
+
+    
+# Show history for logged in users
+    if st.session_state.logged_in and st.session_state.username != "guest":
+        history = get_user_history(st.session_state.username)
+        
+        if len(history) > 1:
+            st.markdown("---")
+            st.subheader("📈 Your Credit Score History")
+            
+            scores = [h[0] for h in history]
+            attempts = list(range(1, len(scores) + 1))
+            
+            fig, ax = plt.subplots(figsize=(8, 3))
+            fig.patch.set_facecolor('#0e1117')
+            ax.set_facecolor('#0e1117')
+            
+            ax.plot(attempts, scores, marker='o', color='#00C851', linewidth=2, markersize=8)
+            ax.fill_between(attempts, scores, alpha=0.1, color='#00C851')
+            
+            ax.set_xlabel('Attempt', color='#888')
+            ax.set_ylabel('Credit Score', color='#888')
+            ax.tick_params(colors='#888')
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_color('#444')
+            ax.spines['bottom'].set_color('#444')
+            ax.grid(True, alpha=0.1)
+            
+            st.pyplot(fig)
+            
+            col_h1, col_h2, col_h3 = st.columns(3)
+            with col_h1:
+                st.metric("First Score", f"{scores[0]}/900")
+            with col_h2:
+                st.metric("Latest Score", f"{scores[-1]}/900")
+            with col_h3:
+                change = scores[-1] - scores[0]
+                st.metric("Total Change", f"{change:+d} pts")
+
+            show_history = st.checkbox("Show All Past Predictions")
+            if show_history:
+                for i, h in enumerate(history, 1):
+                    st.markdown(f"**Attempt {i}** — Score: {h[0]}/900 | {h[1]} | {h[4]}")
 
 # Chat section — only shows after prediction
 if st.session_state.current_profile is not None:
