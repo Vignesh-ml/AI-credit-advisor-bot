@@ -15,7 +15,7 @@
 
 ## 🎯 Problem Statement
 
-Millions of people in India — students, freshers, rural populations — get rejected for loans not because they're irresponsible, but because they have **no credit history**. Banks call them **thin-file users**.
+Millions of people in India students, freshers, rural populations get rejected for loans not because they're irresponsible, but because they have **no credit history**. Banks call them **thin-file users**.
 
 Traditional credit scoring systems can't evaluate them. Our bot solves this.
 
