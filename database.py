@@ -1,97 +1,75 @@
-import sqlite3
 import bcrypt
 from datetime import datetime
+from supabase import create_client
+import streamlit as st
+import os
+from dotenv import load_dotenv
 
-DB_NAME = "users.db"
+load_dotenv()
+
+# Get credentials - works both locally and on Streamlit Cloud
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+except:
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    # Users table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TEXT
-        )
-    """)
-    
-    # Predictions history table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS predictions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            score INTEGER,
-            result TEXT,
-            credit_amount INTEGER,
-            duration INTEGER,
-            created_at TEXT,
-            FOREIGN KEY (username) REFERENCES users (username)
-        )
-    """)
-    
-    conn.commit()
-    conn.close()
+    # Tables already created via SQL Editor - nothing needed here
+    pass
 
 
 def create_user(username, password):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     
     try:
-        cursor.execute(
-            "INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)",
-            (username, password_hash, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        )
-        conn.commit()
-        conn.close()
+        supabase.table('users').insert({
+            'username': username,
+            'password_hash': password_hash
+        }).execute()
         return True, "Account created successfully"
-    except sqlite3.IntegrityError:
-        conn.close()
-        return False, "Username already exists"
+    except Exception as e:
+        if 'duplicate' in str(e).lower():
+            return False, "Username already exists"
+        return False, "Error creating account"
 
 
 def verify_user(username, password):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+    result = supabase.table('users').select('password_hash').eq('username', username).execute()
     
-    cursor.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
-    result = cursor.fetchone()
-    conn.close()
-    
-    if result is None:
+    if not result.data:
         return False
     
-    stored_hash = result[0]
-    return bcrypt.checkpw(password.encode('utf-8'), stored_hash)
+    stored_hash = result.data[0]['password_hash']
+    return bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8'))
 
 
 def save_prediction(username, score, result, credit_amount, duration):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    cursor.execute(
-        """INSERT INTO predictions (username, score, result, credit_amount, duration, created_at) 
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (username, score, result, credit_amount, duration, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    )
-    conn.commit()
-    conn.close()
+    supabase.table('predictions').insert({
+        'username': username,
+        'score': score,
+        'result': result,
+        'credit_amount': credit_amount,
+        'duration': duration
+    }).execute()
 
 
 def get_user_history(username):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+    result = supabase.table('predictions').select(
+        'score, result, credit_amount, duration, created_at'
+    ).eq('username', username).order('id', desc=False).execute()
     
-    cursor.execute(
-        "SELECT score, result, credit_amount, duration, created_at FROM predictions WHERE username = ? ORDER BY id ASC",
-        (username,)
-    )
-    results = cursor.fetchall()
-    conn.close()
-    
-    return results
+    history = []
+    for row in result.data:
+        history.append((
+            row['score'],
+            row['result'],
+            row['credit_amount'],
+            row['duration'],
+            row['created_at']
+        ))
+    return history
