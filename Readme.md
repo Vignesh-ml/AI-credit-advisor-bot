@@ -30,19 +30,32 @@ Traditional credit scoring systems can't evaluate them. Our bot solves this.
 | 💡 Improvement Tips | Personalized steps to improve credit score |
 | 💬 AI Chatbot | Llama 3.3 powered chatbot for follow-up questions |
 | 📊 Credit Score | Estimates score on 300-900 scale |
-| 🔐 Optional Login | Save prediction history across sessions, or skip and use as guest |
-| 📈 Score History | Visual trend chart of past credit assessments |
 | 📄 PDF Report | Downloadable credit assessment report |
-| 🌐 Live Deployed | Accessible from any device |
+| 🔐 Optional Login | Secure signup/login with bcrypt password hashing |
+| 📈 Score History | Persistent tracking of past predictions with trend chart |
+| 🔄 Scenario Comparison | Compare current vs modified profile side-by-side |
+| 🌐 Live Deployed | Accessible from any device with cloud database |
 
 ---
 
+## 🔐 Authentication & History
+
+Users can optionally create an account to track their credit assessments over time:
+
+- Passwords are hashed using bcrypt before storage — never stored in plain text
+- Guest mode available — no login required to use core features
+- Logged-in users get a persistent score history with visual trend charts
+- Data secured with Supabase Row Level Security policies
+
 ## 🛠️ Tech Stack
 
-- **Frontend:** Streamlit
+- **Frontend:** Streamlit with custom CSS styling
 - **ML Model:** Scikit-learn (Logistic Regression)
 - **AI Chatbot:** Groq API + Llama 3.3
+- **Database:** Supabase (PostgreSQL, cloud-hosted)
+- **Authentication:** bcrypt password hashing + Row Level Security
 - **PDF Generation:** ReportLab
+- **Visualization:** Matplotlib
 - **Data:** German Credit Dataset (1000 records, 20 features)
 - **Deployment:** Streamlit Cloud
 
